@@ -32,6 +32,7 @@ pub struct Settings<'a, 't, 'u, 'i> {
     displayed_fields: Option<Option<Vec<String>>>,
     faceted_fields: Option<Option<HashMap<String, String>>>,
     criteria: Option<Option<Vec<String>>>,
+    distinct_attribute: Option<Option<String>>,
 }
 
 impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
@@ -55,6 +56,7 @@ impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
             displayed_fields: None,
             faceted_fields: None,
             criteria: None,
+            distinct_attribute: None,
             update_id,
         }
     }
@@ -89,6 +91,14 @@ impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
 
     pub fn set_criteria(&mut self, criteria: Vec<String>) {
         self.criteria = Some(Some(criteria));
+    }
+
+    pub fn set_distinct_attribute(&mut self, attribute: String) {
+        self.distinct_attribute = Some(Some(attribute));
+    }
+
+    pub fn reset_distinct_attribute(&mut self) {
+        self.distinct_attribute = None;
     }
 
     fn reindex<F>(&mut self, cb: &F, old_fields_ids_map: FieldsIdsMap) -> anyhow::Result<()>

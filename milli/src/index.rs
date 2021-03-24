@@ -19,16 +19,18 @@ use crate::{
 
 pub const CRITERIA_KEY: &str = "criteria";
 pub const DISPLAYED_FIELDS_KEY: &str = "displayed-fields";
+pub const DISTINCT_ATTRIBUTE_KEY: &str = "distinct-attributes-key";
 pub const DOCUMENTS_IDS_KEY: &str = "documents-ids";
 pub const FACETED_DOCUMENTS_IDS_PREFIX: &str = "faceted-documents-ids";
 pub const FACETED_FIELDS_KEY: &str = "faceted-fields";
 pub const FIELDS_IDS_MAP_KEY: &str = "fields-ids-map";
+pub const HARD_EXTERNAL_DOCUMENTS_IDS_KEY: &str = "hard-external-documents-ids";
 pub const PRIMARY_KEY_KEY: &str = "primary-key";
 pub const SEARCHABLE_FIELDS_KEY: &str = "searchable-fields";
-pub const HARD_EXTERNAL_DOCUMENTS_IDS_KEY: &str = "hard-external-documents-ids";
 pub const SOFT_EXTERNAL_DOCUMENTS_IDS_KEY: &str = "soft-external-documents-ids";
 pub const WORDS_FST_KEY: &str = "words-fst";
 pub const WORDS_PREFIXES_FST_KEY: &str = "words-prefixes-fst";
+
 const CREATED_AT_KEY: &str = "created-at";
 const UPDATED_AT_KEY: &str = "updated-at";
 
@@ -427,5 +429,17 @@ impl Index {
 
     pub(crate) fn set_updated_at(&self, wtxn: &mut RwTxn, time: &DateTime<Utc>) -> heed::Result<()> {
         self.main.put::<_, Str, SerdeJson<DateTime<Utc>>>(wtxn, UPDATED_AT_KEY, &time)
+    }
+
+    pub(crate) fn put_distinct_attribute(&self, wtxn: &mut RwTxn, distinct_attribute: &str) -> heed::Result<()> {
+        self.main.put::<_, Str, Str>(wtxn, DISTINCT_ATTRIBUTE_KEY, distinct_attribute)
+    }
+
+    pub(crate) fn get_distinct_attribute<'a>(&'a self, rtxn: &'a RoTxn) -> heed::Result<Option<&'a str>> {
+        self.main.get::<_, Str, Str>(rtxn, DISTINCT_ATTRIBUTE_KEY)
+    }
+
+    pub(crate) fn delete_distinct_attribute(&self, wtxn: &mut RwTxn) -> heed::Result<bool> {
+        self.main.delete::<_, Str>(wtxn, DISTINCT_ATTRIBUTE_KEY)
     }
 }
