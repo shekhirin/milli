@@ -179,6 +179,36 @@ impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
         Ok(true)
     }
 
+    fn update_distinct_attribute(&mut self) -> anyhow::Result<bool> {
+        match self.distinct_attribute {
+            Some(Some(ref attr)) => {
+                let mut fields_ids_map = self.index.fields_ids_map(self.wtxn)?;
+                // fields are deduplicated, only the first occurrence is taken into account
+
+                fields_ids_map
+                    .insert(attr)
+                    .context("field id limit exceeded")?;
+
+                self.index.put_distinct_attribute(self.wtxn, &attr)?;
+                self.index.put_fields_ids_map(self.wtxn, &fields_ids_map)?;
+                // Distinct is added to facets.
+                match self.faceted_fields {
+                    Some(Some(ref mut fields)) => {
+                        fields.insert(attr.to_owned(), String::from("String"));
+                    }
+                    _ => {
+                        let mut fields = HashMap::new();
+                        fields.insert(attr.to_owned(), String::from("String"));
+                        self.faceted_fields = Some(Some(fields));
+                    }
+                }
+            }
+            Some(None) => { self.index.delete_distinct_attribute(self.wtxn)?; },
+            None => return Ok(false),
+        }
+        Ok(true)
+    }
+
     /// Udpates the index's searchable attributes. This causes the field map to be recomputed to
     /// reflect the order of the searchable attributes.
     fn update_searchable(&mut self) -> anyhow::Result<bool> {
@@ -262,6 +292,8 @@ impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
         {
             self.index.set_updated_at(self.wtxn, &Utc::now())?;
             let old_fields_ids_map = self.index.fields_ids_map(&self.wtxn)?;
+            // must be done before facets, since distinct is added to facets.
+            let distinct_update = self.update_distinct_attribute()?;
             self.update_displayed()?;
             let facets_updated = self.update_facets()?;
             // update_criteria MUST be called after update_facets, since criterion fields must be set
@@ -269,7 +301,7 @@ impl<'a, 't, 'u, 'i> Settings<'a, 't, 'u, 'i> {
             self.update_criteria()?;
             let searchable_updated = self.update_searchable()?;
 
-            if facets_updated || searchable_updated {
+            if facets_updated || searchable_updated || distinct_update {
                 self.reindex(&progress_callback, old_fields_ids_map)?;
             }
             Ok(())

@@ -12,7 +12,7 @@ use once_cell::sync::Lazy;
 use roaring::bitmap::RoaringBitmap;
 
 use crate::search::criteria::fetcher::FetcherResult;
-use crate::{Index, DocumentId};
+use crate::{Index, DocumentId, BEU32};
 
 pub use self::facet::FacetIter;
 pub use self::facet::{FacetCondition, FacetDistribution, FacetNumberOperator, FacetStringOperator};
@@ -123,11 +123,25 @@ impl<'a> Search<'a> {
         let mut limit = self.limit;
         let mut documents_ids = Vec::new();
         let mut initial_candidates = RoaringBitmap::new();
+
+        let field_ids_map = self.index.fields_ids_map(self.rtxn)?;
+        let distinct = self.index
+            .distinct_attribute(self.rtxn)?
+            .and_then(|name| field_ids_map.id(name));
+
         while let Some(FetcherResult { candidates, bucket_candidates, .. }) = criteria.next(&initial_candidates)? {
 
             debug!("Number of candidates found {}", candidates.len());
 
             let mut len = candidates.len() as usize;
+
+            if let Some(distinct) = distinct {
+                for doc_id in candidates.iter() {
+                    if let Some(document) = self.index.documents.get(self.rtxn, &BEU32::new(doc_id))? {
+                        println!("value: {}", serde_json::from_slice::<serde_json::Value>(document.get(distinct).unwrap()).unwrap());
+                    }
+                }
+            }
             let mut candidates = candidates.into_iter();
 
             initial_candidates.union_with(&bucket_candidates);
