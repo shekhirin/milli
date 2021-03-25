@@ -123,7 +123,7 @@ impl<'a> Search<'a> {
         let mut limit = self.limit;
         let mut documents_ids = Vec::new();
         let mut initial_candidates = RoaringBitmap::new();
-        while let Some(FetcherResult { candidates, bucket_candidates, .. }) = criteria.next()? {
+        while let Some(FetcherResult { candidates, bucket_candidates, .. }) = criteria.next(&initial_candidates)? {
 
             debug!("Number of candidates found {}", candidates.len());
 

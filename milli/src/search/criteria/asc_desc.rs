@@ -17,7 +17,7 @@ use crate::search::facet::FacetIter;
 use crate::search::query_tree::Operation;
 use crate::search::WordDerivationsCache;
 use crate::{FieldsIdsMap, FieldId, Index};
-use super::{Criterion, CriterionResult};
+use super::{Criterion, CriterionResult, SortContext};
 
 pub struct AscDesc<'t> {
     index: &'t Index,
@@ -147,7 +147,7 @@ impl<'t> AscDesc<'t> {
 
 impl<'t> Criterion for AscDesc<'t> {
     #[logging_timer::time("AscDesc::{}")]
-    fn next(&mut self, wdcache: &mut WordDerivationsCache) -> anyhow::Result<Option<CriterionResult>> {
+    fn next(&mut self, context: SortContext) -> anyhow::Result<Option<CriterionResult>> {
         loop {
             debug!("Facet {}({}) iteration",
                 if self.ascending { "Asc" } else { "Desc" }, self.field_name
@@ -159,7 +159,8 @@ impl<'t> Criterion for AscDesc<'t> {
                     let bucket_candidates = take(&mut self.bucket_candidates);
                     match self.parent.as_mut() {
                         Some(parent) => {
-                            match parent.next(wdcache)? {
+                            let SortContext { word_cache, exclude } = context;
+                            match parent.next(SortContext { exclude, word_cache })? {
                                 Some(CriterionResult { query_tree, candidates, bucket_candidates }) => {
                                     self.query_tree = query_tree;
                                     let candidates = match (&self.query_tree, candidates) {
@@ -169,7 +170,7 @@ impl<'t> Criterion for AscDesc<'t> {
                                         },
                                         (Some(qt), None) => {
                                             let context = CriteriaBuilder::new(&self.rtxn, &self.index)?;
-                                            let mut candidates = resolve_query_tree(&context, qt, &mut HashMap::new(), wdcache)?;
+                                            let mut candidates = resolve_query_tree(&context, qt, &mut HashMap::new(), word_cache)?;
                                             candidates.intersect_with(&self.faceted_candidates);
                                             candidates
                                         },

@@ -20,8 +20,13 @@ mod asc_desc;
 mod proximity;
 pub mod fetcher;
 
+pub struct SortContext<'a, 'b> {
+    exclude: &'a RoaringBitmap,
+    word_cache: &'b mut WordDerivationsCache,
+}
+
 pub trait Criterion {
-    fn next(&mut self, wdcache: &mut WordDerivationsCache) -> anyhow::Result<Option<CriterionResult>>;
+    fn next(&mut self, wdcache: SortContext) -> anyhow::Result<Option<CriterionResult>>;
 }
 
 /// The result of a call to the parent criterion.

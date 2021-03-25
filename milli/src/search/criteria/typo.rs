@@ -6,7 +6,7 @@ use roaring::RoaringBitmap;
 
 use crate::search::query_tree::{maximum_typo, Operation, Query, QueryKind};
 use crate::search::{word_derivations, WordDerivationsCache};
-use super::{Candidates, Criterion, CriterionResult, Context, query_docids, query_pair_proximity_docids};
+use super::{Candidates, Criterion, CriterionResult, Context, query_docids, query_pair_proximity_docids, SortContext};
 
 pub struct Typo<'t> {
     ctx: &'t dyn Context,
@@ -51,8 +51,9 @@ impl<'t> Typo<'t> {
 
 impl<'t> Criterion for Typo<'t> {
     #[logging_timer::time("Typo::{}")]
-    fn next(&mut self, wdcache: &mut WordDerivationsCache) -> anyhow::Result<Option<CriterionResult>> {
+    fn next(&mut self, context: SortContext) -> anyhow::Result<Option<CriterionResult>> {
         use Candidates::{Allowed, Forbidden};
+        let SortContext { word_cache, exclude } = context;
         loop {
             debug!("Typo at iteration {} ({:?})", self.number_typos, self.candidates);
 
@@ -71,9 +72,9 @@ impl<'t> Criterion for Typo<'t> {
                     } else {
                         let fst = self.ctx.words_fst();
                         let new_query_tree = if self.number_typos < 2 {
-                            alterate_query_tree(&fst, query_tree.clone(), self.number_typos, wdcache)?
+                            alterate_query_tree(&fst, query_tree.clone(), self.number_typos, word_cache)?
                         } else if self.number_typos == 2 {
-                            *query_tree = alterate_query_tree(&fst, query_tree.clone(), self.number_typos, wdcache)?;
+                            *query_tree = alterate_query_tree(&fst, query_tree.clone(), self.number_typos, word_cache)?;
                             query_tree.clone()
                         } else {
                             query_tree.clone()
@@ -84,7 +85,7 @@ impl<'t> Criterion for Typo<'t> {
                             &new_query_tree,
                             self.number_typos,
                             &mut self.candidates_cache,
-                            wdcache,
+                            word_cache,
                         )?;
                         new_candidates.intersect_with(&candidates);
                         candidates.difference_with(&new_candidates);
@@ -109,9 +110,9 @@ impl<'t> Criterion for Typo<'t> {
                     } else {
                         let fst = self.ctx.words_fst();
                         let new_query_tree = if self.number_typos < 2 {
-                            alterate_query_tree(&fst, query_tree.clone(), self.number_typos, wdcache)?
+                            alterate_query_tree(&fst, query_tree.clone(), self.number_typos, word_cache)?
                         } else if self.number_typos == 2 {
-                            *query_tree = alterate_query_tree(&fst, query_tree.clone(), self.number_typos, wdcache)?;
+                            *query_tree = alterate_query_tree(&fst, query_tree.clone(), self.number_typos, word_cache)?;
                             query_tree.clone()
                         } else {
                             query_tree.clone()
@@ -122,7 +123,7 @@ impl<'t> Criterion for Typo<'t> {
                             &new_query_tree,
                             self.number_typos,
                             &mut self.candidates_cache,
-                            wdcache,
+                            word_cache,
                         )?;
                         new_candidates.difference_with(&candidates);
                         candidates.union_with(&new_candidates);
@@ -147,7 +148,7 @@ impl<'t> Criterion for Typo<'t> {
                 (None, Forbidden(_)) => {
                     match self.parent.as_mut() {
                         Some(parent) => {
-                            match parent.next(wdcache)? {
+                            match parent.next(SortContext { exclude, word_cache })? {
                                 Some(CriterionResult { query_tree, candidates, bucket_candidates }) => {
                                     self.query_tree = query_tree.map(|op| (maximum_typo(&op), op));
                                     self.number_typos = 0;
