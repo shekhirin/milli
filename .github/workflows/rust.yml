@@ -24,8 +24,6 @@ jobs:
     - uses: actions/checkout@v2
     - name: Cache dependencies
       uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
-      with:
-        key: ${{ matrix.os }}-${{ matrix.rust }}-${{ hashFiles('Cargo.toml') }}
     - uses: actions-rs/toolchain@v1
       with:
         profile: minimal
@@ -49,8 +47,6 @@ jobs:
       - uses: actions/checkout@v2
       - name: Cache dependencies
         uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
-        with:
-          key: ${{ matrix.os }}-${{ matrix.rust}}-${{ hashFiles('Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
