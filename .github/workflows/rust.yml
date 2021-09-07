@@ -23,12 +23,8 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Cache dependencies
-      uses: actions/cache@v2
+      uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
       with:
-        path: |
-          ~/.cargo
-          ./Cargo.lock
-          ./target
         key: ${{ matrix.os }}-${{ matrix.rust }}-${{ hashFiles('Cargo.toml') }}
     - uses: actions-rs/toolchain@v1
       with:
@@ -52,12 +48,8 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Cache dependencies
-        uses: actions/cache@v2
+        uses: Swatinem/rust-cache@c5ed9ba6b7e1bb8aff90d43acd2f0af4990fa57c
         with:
-          path: |
-            ~/.cargo
-            ./Cargo.lock
-            ./target
           key: ${{ matrix.os }}-${{ matrix.rust}}-${{ hashFiles('Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
